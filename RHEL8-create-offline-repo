@@ -1,0 +1,59 @@
+## Yum Offline Repo Sync on RHEL 8
+
+# yum update # In Repo server
+# subscription-manager register
+  Username:
+   Password:
+# ubscription-manager subscribe
+# yum update ## Now yum will sync with Subscription repo’s
+
+## Step 2:
+# yum whatprovides reposync createrepo
+# yum install yum-utils createrepo -y
+# yum install ntfs-3g
+
+## Step 3: ( Mount external drive if needed )
+
+# cd /mnt/external
+# mkdir /mnt/external/repo
+# cd /mnt/external/repo
+# reposync -p /mnt/external/repo
+
+## Step 4: ( Create repo Databases )
+
+# cd /mnt/external/repo
+# ls -lrt
+   rhel-8-server-rpm
+# cd rhel-8-server-rpm
+# ls -lrt Packages
+# createrepo /mnt/external/repo/rhel-8-server-rpm
+
+## Step 5: ( Check Repo data that created )
+
+# cd /mnt/external/repo/rhel-8-server-rpm
+# ls -lrt repodata
+# cd repodata
+# ls -lrt
+## Done with offline Repo setup
+
+## Now in Client server install plugin and proceed update
+
+## Step 6: ( Client Server )
+
+# cat /etc/yum.conf
+   Edit ( Plugins = 1 to 0 value )
+   Plugins = 0
+### Create repo File
+
+# vim /etc/yum.repo.d/redhat.repo
+	[RHEL-8]
+	name=RHEL8 Offline Repo
+	gpgcheck =0
+	enable=1
+	baseurl=file:///mnt/external/repo/rhel-8-server-rpm/Packages/	
+
+# yum check-update
+
+## Now you can see RHEL8 packages from offline /mnt/external/repo/rhel-8-server-rpm/Packages missing items will updated
+
+
