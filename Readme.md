@@ -15,6 +15,3 @@ ansible-playbook main.yml \
 The playbook does not reboot hosts by default.  
 To reboot hosts when necessary, override the reboot_ok variable from the command line as shown above.  
 
----
-Author:   Isaac Behrens  
-Date:     February 7, 2019  
