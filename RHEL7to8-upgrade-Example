@@ -1,0 +1,290 @@
+RHEL7to8-upgrade-Example
+
+RHEL 7 to 8 In-Place Leapp Upgrade:
+-----------------------------------
+
+Pre-Check Tasks:
+---------------
+sudo yum update -y; ## reboot
+sudo yum install python2-leapp leapp-*	## Install In-Place upgrade dependancies using LEAPP Upgrade
+sudo yum list rh-amazon-rhui-client		
+sudo yum remove rh-amazon-rhui-client*	## Remove Repo
+
+sudo yum versionlock clear	## Clear Version lock
+
+sudo modprobe -r pata_acpi	## Disable LSPCI
+sudo modprobe -r floppy		## Disable Floppy drive
+
+sudo setenforce 0		## Disable SE-Linux Policy
+
+df -Ph	/var			## Make Sure /var /opt Filesystems has 8-10Gb of Disk space
+
+sudo cat /etc/leapp/files/leapp_upgrade_repositories.repo		## RHEL 8 Repo file to run Pre-Check
+[rhel-8-baseos-rhui-rpms]
+name=Red Hat Enterprise Linux 8 baseos RHUI (RPMs)
+baseurl=http://access.redhat.com/repo/RHEL8/rhel-8-baseos-rhui-rpms
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+sslverify=1
+sslcacert=/etc/pki/rhui/cdn.redhat.com-chain.crt
+sslclientcert=/etc/pki/rhui/product/content-rhel8.crt
+sslclientkey=/etc/pki/rhui/content-rhel8.key
+
+[rhel-8-appstream-rhui-rpms]
+name=Red Hat Enterprise Linux 8 baseos RHUI (RPMs)
+baseurl=http://access.redhat.com//repo/RHEL8/rhel-8-appstream-rhui-rpms
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+sslverify=1
+sslcacert=/etc/pki/rhui/cdn.redhat.com-chain.crt
+sslclientcert=/etc/pki/rhui/product/content-rhel8.crt
+sslclientkey=/etc/pki/rhui/content-rhel8.key
+
+sudo leapp preupgrade --no-rhsm  --target 8.9	## Pre-Upgrade step to reach Target RHEL8.9
+sudo leapp upgrade --no-rhsm  --target 8.9	## Upgrade step to reach Target RHEL8.9
+
+Transaction Summary
+=============================================================================================================================================
+Install    303 Packages
+Upgrade    357 Packages
+Remove      90 Packages
+Downgrade    6 Packages
+
+Total size: 732 M
+Total download size: 621 M
+Downloading Packages:
+Check completed.
+====> * check_initramfs_tasks
+        Inhibit the upgrade if conflicting "initramfs" tasks are detected
+==> Processing phase `Reports`
+====> * verify_check_results
+        Check all dialogs and notify that user needs to make some choices.
+====> * verify_check_results
+        Check all generated results messages and notify user about them.
+
+Debug output written to /var/log/leapp/leapp-preupgrade.log
+
+============================================================
+                      REPORT OVERVIEW
+============================================================
+
+Upgrade has been inhibited due to the following problems:
+    1. Missing required answers in the answer file
+    2. Missing required answers in the answer file
+
+HIGH and MEDIUM severity reports:
+    1. Packages available in excluded repositories will not be installed
+    2. SSSD Domain "<DOMAIN_NAME>": sudo rules containing wildcards will stop working.
+    3. GRUB2 core will be automatically updated during the upgrade
+    4. Difference in Python versions and support in RHEL 8
+    5. Packages not signed by Red Hat found on the system
+
+Reports summary:
+    Errors:                      0
+    Inhibitors:                  2
+    HIGH severity reports:       5
+    MEDIUM severity reports:     0
+    LOW severity reports:        7
+    INFO severity reports:       2
+
+Before continuing consult the full report:
+    A report has been generated at /var/log/leapp/leapp-report.json
+    A report has been generated at /var/log/leapp/leapp-report.txt
+
+============================================================
+                   END OF REPORT OVERVIEW
+============================================================
+
+Answerfile has been generated at /var/log/leapp/answerfile
+
+
+sudo cat /var/log/leapp/answerfile
+[remove_pam_pkcs11_module_check]
+# Title:              None
+# Reason:             Confirmation
+# =================== remove_pam_pkcs11_module_check.confirm ==================
+# Label:              Disable pam_pkcs11 module in PAM configuration? If no, the upgrade process will be interrupted.
+# Description:        PAM module pam_pkcs11 is no longer available in RHEL-8 since it was replaced by SSSD.
+# Reason:             Leaving this module in PAM configuration may lock out the system.
+# Type:               bool
+# Default:            None
+# Available choices: True/False
+# Unanswered question. Uncomment the following line with your answer
+confirm = True
+
+[authselect_check]
+# Title:              None
+# Reason:             Confirmation
+# ========================== authselect_check.confirm =========================
+# Label:              Configure PAM and nsswitch.conf with the following authselect call? authselect select sssd with-faillock with-fingerprint with-mkhomedir --force
+# Description:        If yes, suggested authselect profile will be applied on your system to generate PAM and nsswitch.conf configuration. Ifno, current configuration will be kept intact.
+# Reason:             There is a new tool called authselect in RHEL8 that replaced authconfig which is used to manage authentication (PAM) and identity (nsswitch.conf) sources. It is recommended to switch to this tool.
+# Type:               bool
+# Default:            True
+# Available choices: True/False
+# Unanswered question. Uncomment the following line with your answer
+confirm = True
+
+Upgrade Steps:
+sudo leapp upgrade --no-rhsm  --target 8.9	## Upgrade step to reach Target RHEL8.9
+
+Transaction Summary
+=============================================================================================================================================
+Install    303 Packages
+Upgrade    357 Packages
+Remove      90 Packages
+Downgrade    6 Packages
+
+Total size: 732 M
+DNF will only download packages, install gpg keys, and check the transaction.
+Downloading Packages:
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Complete!
+====> * add_upgrade_boot_entry
+        Add new boot entry for Leapp provided initramfs.
+A reboot is required to continue. Please reboot your system.
+
+
+Debug output written to /var/log/leapp/leapp-upgrade.log
+
+============================================================
+                      REPORT OVERVIEW
+============================================================
+
+HIGH and MEDIUM severity reports:
+    1. Packages available in excluded repositories will not be installed
+    2. Packages not signed by Red Hat found on the system
+    3. SSSD Domain "<DOMAIN_NAME>": sudo rules containing wildcards will stop working.
+    4. GRUB2 core will be automatically updated during the upgrade
+    5. Difference in Python versions and support in RHEL 8
+    6. Module pam_pkcs11 will be removed from PAM configuration
+
+Reports summary:
+    Errors:                      0
+    Inhibitors:                  0
+    HIGH severity reports:       5
+    MEDIUM severity reports:     1
+    LOW severity reports:        7
+    INFO severity reports:       3
+
+Before continuing consult the full report:
+    A report has been generated at /var/log/leapp/leapp-report.json
+    A report has been generated at /var/log/leapp/leapp-report.txt
+
+============================================================
+                   END OF REPORT OVERVIEW
+============================================================
+
+Answerfile has been generated at /var/log/leapp/answerfile
+## Reboot server after this step
+
+## Important note: After Reboot RHEL7 package will remove and during reboot while checking in Console. This takes 20-40 mins depends on Resource Type of instance.
+
+Post-Upgrade Steps:
+-------------------
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt /lib/modules/*el7*
+/lib/modules/3.10.0-1160.108.1.el7.x86_64:
+total 0
+
+/lib/modules/3.10.0-1160.114.2.el7.x86_64:
+total 120
+-rw-r--r--.  1 root root 97866 Mar  3 21:26 modules.order
+-rw-r--r--.  1 root root  7426 Mar  3 21:26 modules.builtin
+drwxr-xr-x.  2 root root     6 Mar  3 21:26 updates
+drwxr-xr-x.  2 root root     6 Mar  3 21:26 extra
+-rw-r--r--.  1 root root  1810 Mar  3 21:26 modules.networking
+-rw-r--r--.  1 root root    69 Mar  3 21:26 modules.modesetting
+-rw-r--r--.  1 root root   140 Mar  3 21:26 modules.drm
+-rw-r--r--.  1 root root  1333 Mar  3 21:26 modules.block
+lrwxrwxrwx.  1 root root    45 Mar 20 16:27 build -> /usr/src/kernels/3.10.0-1160.114.2.el7.x86_64
+drwxr-xr-x. 12 root root   128 Mar 20 16:27 kernel
+lrwxrwxrwx.  1 root root     5 Mar 20 16:27 source -> build
+drwxr-xr-x.  2 root root    95 Mar 20 16:27 vdso
+drwxr-xr-x.  2 root root     6 Mar 20 16:27 weak-updates
+
+/lib/modules/3.10.0-1160.118.1.el7.x86_64:
+total 120
+-rw-r--r--.  1 root root 97866 Apr  4 15:40 modules.order
+-rw-r--r--.  1 root root  7426 Apr  4 15:40 modules.builtin
+drwxr-xr-x.  2 root root     6 Apr  4 15:41 updates
+drwxr-xr-x.  2 root root     6 Apr  4 15:41 extra
+-rw-r--r--.  1 root root  1810 Apr  4 15:41 modules.networking
+-rw-r--r--.  1 root root    69 Apr  4 15:41 modules.modesetting
+-rw-r--r--.  1 root root   140 Apr  4 15:41 modules.drm
+-rw-r--r--.  1 root root  1333 Apr  4 15:41 modules.block
+lrwxrwxrwx.  1 root root    45 May 17 11:02 build -> /usr/src/kernels/3.10.0-1160.118.1.el7.x86_64
+drwxr-xr-x. 12 root root   128 May 17 11:02 kernel
+lrwxrwxrwx.  1 root root     5 May 17 11:02 source -> build
+drwxr-xr-x.  2 root root    95 May 17 11:02 vdso
+drwxr-xr-x.  2 root root     6 May 17 11:03 weak-updates
+
+[admin-user1@RHEL8.9 ~]$ sudo rm -r /lib/modules/*el7*
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt /lib/modules/*el7*
+ls: cannot access '/lib/modules/*el7*': No such file or directory
+[admin-user1@RHEL8.9 ~]$
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt  /var/log/leapp /root/tmp_leapp_py3 /var/lib/leapp
+/var/log/leapp:
+total 6228
+drwxr-xr-x+ 2 root root      86 Jun  7 18:42 archive
+-rw-r-----+ 1 root root   15567 Jun  7 18:47 dnf-plugin-data.txt
+-rw-r--r--+ 1 root root       0 Jun  7 19:16 answerfile
+-rw-r--r--+ 1 root root      84 Jun  7 19:16 answerfile.userchoices
+-rw-r--r--+ 1 root root  419338 Jun  7 19:16 leapp-report.txt
+-rw-r--r--+ 1 root root  452182 Jun  7 19:16 leapp-report.json
+-rw-r--r--+ 1 root root 5478880 Jun  7 19:16 leapp-upgrade.log
+
+/var/lib/leapp:
+total 24596
+dr-xr-xr-x. 20 root root     4096 Jun  7 19:10 el8userspace
+-rw-------.  1 root root 25175040 Jun  7 19:16 leapp.db
+
+/root/tmp_leapp_py3:
+total 4
+-rwxrwx---+ 1 root root 118 Jun  7 19:16 leapp3
+lrwxrwxrwx. 1 root root  38 Jun  7 19:16 leapp -> /usr/lib/python2.7/site-packages/leapp
+[admin-user1@RHEL8.9 ~]$
+[admin-user1@RHEL8.9 ~]$
+[admin-user1@RHEL8.9 ~]$ sudo rm -rf /var/log/leapp /root/tmp_leapp_py3 /var/lib/leapp
+[admin-user1@RHEL8.9 ~]$
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt  /var/log/leapp /root/tmp_leapp_py3 /var/lib/leapp
+ls: cannot access '/var/log/leapp': No such file or directory
+ls: cannot access '/root/tmp_leapp_py3': No such file or directory
+ls: cannot access '/var/lib/leapp': No such file or directory
+[admin-user1@RHEL7.9 ~]$ sudo ls -lrt /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+-rw-------. 1 root root 45877789 Sep 18  2020 /boot/initramfs-0-rescue-31c0a74479864f71b2aa3bf592405578.img
+-rwxr-xr-x. 1 root root  6769496 Sep 18  2020 /boot/vmlinuz-0-rescue-31c0a74479864f71b2aa3bf592405578
+-rw-------. 1 root root 46934554 Nov 12  2020 /boot/initramfs-0-rescue-77ea14edef08434a9120fed7ba8786a0.img
+-rwxr-xr-x. 1 root root  6769496 Nov 12  2020 /boot/vmlinuz-0-rescue-77ea14edef08434a9120fed7ba8786a0
+[admin-user1@RHEL8.9 ~]$ sudo rm /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+[admin-user1@RHEL8.9 ~]$ sudo rm /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+ls: cannot access '/boot/vmlinuz-*rescue*': No such file or directory
+ls: cannot access '/boot/initramfs-*rescue*': No such file or directory
+[admin-user1@RHEL8.9 ~]$ sudo /usr/lib/kernel/install.d/51-dracut-rescue.install add "$(uname -r)" /boot "/boot/vmlinuz-$(uname -r)"
+
+
+
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+-rwxr-x---. 1 root root 11035592 Jun  7 20:08 /boot/vmlinuz-0-rescue-77ea14edef08434a9120fed7ba8786a0
+-rw-------. 1 root root 67495099 Jun  7 20:09 /boot/initramfs-0-rescue-77ea14edef08434a9120fed7ba8786a0.img
+[admin-user1@RHEL8.9 ~]$ sudo grubby --info=ALL | grep "\.el7" || echo "Old kernels are not present in the bootloader."
+Old kernels are not present in the bootloader.
+[admin-user1@RHEL8.9 ~]$ sudo ls -lrt /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+-rwxr-x---. 1 root root 11035592 Jun  7 20:08 /boot/vmlinuz-0-rescue-77ea14edef08434a9120fed7ba8786a0
+-rw-------. 1 root root 67495099 Jun  7 20:09 /boot/initramfs-0-rescue-77ea14edef08434a9120fed7ba8786a0.img
+[admin-user1@RHEL8.9 ~]$ sudo lsinitrd /boot/initramfs-*rescue*.img | grep -qm1 "$(uname -r)/kernel/" && echo "OK" || echo "FAIL"
+OK
+[admin-user1@RHEL8.9 ~]$ sudo grubby --info $(ls /boot/vmlinuz-*rescue*)
+index=1
+kernel="/boot/vmlinuz-0-rescue-77ea14edef08434a9120fed7ba8786a0"
+args="ro ipv6.disable=1 quiet $tuned_params"
+root="UUID=ca463cd7-12be-41d5-bc89-18d4d9bbe2bd"
+initrd="/boot/initramfs-0-rescue-77ea14edef08434a9120fed7ba8786a0.img $tuned_initrd"
+title="Red Hat Enterprise Linux (0-rescue-77ea14edef08434a9120fed7ba8786a0) 8.9 (Ootpa)"
+id="77ea14edef08434a9120fed7ba8786a0-0-rescue"
+[admin-user1@RHEL8.9 ~]$
