@@ -1,0 +1,55 @@
+## RHEL8 Post upgrade Implementation Steps: ##
+cat /etc/redhat-release;uname -r
+sudo subscription-manager list --installed
+sudo subscription-manager release
+sudo yum config-manager --save --setopt exclude=''
+
+
+sudo cd /lib/modules && ls -ld /lib/modules/*.el7*
+
+[ -x /usr/sbin/weak-modules ] && /usr/sbin/weak-modules --remove-kernel 3.10.0-1160.102.1.el7.x86_64
+[ -x /usr/sbin/weak-modules ] && /usr/sbin/weak-modules --remove-kernel 3.10.0-1160.105.1.el7.x86_64
+[ -x /usr/sbin/weak-modules ] && /usr/sbin/weak-modules --remove-kernel 3.10.0-1160.108.1.el7.x86_64
+
+sudo /bin/kernel-install remove 3.10.0-1160.102.1.el7.x86_64 /lib/modules/3.10.0-1160.102.1.el7.x86_64/vmlinuz
+sudo /bin/kernel-install remove 3.10.0-1160.105.1.el7.x86_64 /lib/modules/3.10.0-1160.105.1.el7.x86_64/vmlinuz
+sudo /bin/kernel-install remove 3.10.0-1160.108.1.el7.x86_64 /lib/modules/3.10.0-1160.108.1.el7.x86_64/vmlinuz
+
+rpm -qa | grep -e '\.el[67]' | grep -vE '^(gpg-pubkey|libmodulemd|katello-ca-consumer)' | sort
+
+sudo yum remove leapp-deps-el8 leapp-repository-deps-el8
+
+sudo ls -lrt /lib/modules/*el7*
+
+# sudo rm -r /lib/modules/*el7*
+
+sudo ls -lrt  /var/log/leapp /root/tmp_leapp_py3 /var/lib/leapp
+# sudo rm -rf /var/log/leapp /root/tmp_leapp_py3 /var/lib/leapp
+
+sudo ls -lrt /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+# sudo rm /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+
+sudo /usr/lib/kernel/install.d/51-dracut-rescue.install add "$(uname -r)" /boot "/boot/vmlinuz-$(uname -r)"
+## RHEL8 Post upgrade Implementation Steps: ##
+
+## RHEL8 Post upgrade Verification Steps: ##
+
+sudo grubby --info=ALL | grep "\.el7" || echo "Old kernels are not present in the bootloader."
+
+sudo ls -lrt /boot/vmlinuz-*rescue* /boot/initramfs-*rescue*
+sudo lsinitrd /boot/initramfs-*rescue*.img | grep -qm1 "$(uname -r)/kernel/" && echo "OK" || echo "FAIL"
+
+sudo grubby --info $(ls /boot/vmlinuz-*rescue*)
+# RHEL8 Post upgrade Verification Steps: ##
+
+## Re-configure Trendmicro ( ds_agent ) after RHEL8 upgrade: ##
+aws s3 cp s3://BUCKET/Ram/AgentDeploymentScript.sh /tmp/
+aws s3 cp s3://BUCKET/AgentDeploymentScript.sh .
+
+sudo sh -x /tmp/AgentDeploymentScript.sh
+
+## Re-configure Redis after RHEL8 upgrade: ##
+sudo ls -lrt /etc/redis/*
+sudo cp /etc/redis.conf.rpmnew /etc/redis/redis.conf; sudo cp /etc/redis-sentinel.conf.rpmnew /etc/redis/redis-sentinel.conf; sudo chown redis:root /etc/redis/redis.conf; sudo chown redis:root /etc/redis/redis-sentinel.conf
+sudo systemctl restart redis
+sudo netstat -anlp | grep redis
