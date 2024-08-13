@@ -1,0 +1,110 @@
+RHEL7 to RHEL8 Upgrade POC
+-------------------------------------
+1) Ensure the successfull backup is taken for the Upgrade performing server
+
+2) Ensure RHEL 7 uptodate patches repo should be  available in the client server and patch the server upto date
+
+3) Install leapp packages installed in the server  
+--------
+python2-leapp-0.16.0-1.el7_9.noarch
+leapp-deps-0.16.0-1.el7_9.noarch
+leapp-rhui-aws-1.0.7-1.el7.noarch
+leapp-upgrade-el7toel8-deps-0.19.0-1.el7_9.noarch
+leapp-upgrade-el7toel8-0.19.0-1.el7_9.noarch
+leapp-0.16.0-1.el7_9.noarch
+-----------
+
+
+4)sudo yum versionlock clear --> to clear the version lock
+
+5)sudo leapp preupgrade --no-rhsm  --target 8.9    (here --no-rhsm is used for clients without subscription-manager )
+ 
+Analyse the report from the /var/log/leapp/leapp-report.txt  and fix the Errors and Inhibitors mainly which obstructs the upgrade through leapp
+
+
+
+Remediations applied/followed for the below errors
+----------------------------------
+i) Risk Factor: high (inhibitor)
+Title: Package "leapp-rhui-aws" is missing
+Summary: On AWS using RHUI infrastructure, a package "leapp-rhui-aws" is needed for in-place upgrade
+Remediation: [command] yum install -y leapp-rhui-aws 
+
+
+ii) Risk Factor: high (inhibitor)
+Title: The pam_tally2 pam module(s) no longer available
+Summary: The services system-auth-ac using PAM are configured to use pam_tally2 module(s), which is no longer available in Red Hat Enterprise Linux 8.
+Remediation: [hint] If you depend on its functionality, it is recommended to migrate to pam_faillock. Otherwise please remove the pam module(s) from all the files under /etc/pam.d/.
+
+-->Comment the configurations in the files in the /etc/pam.d which has pam_tally2 enabled
+
+
+iii)Risk Factor: high (inhibitor)
+Title: Using RHSM has been skipped but no custom or RHUI repositories have been delivered.
+Summary: Leapp is run in the mode when the Red Hat Subscription Manager is not used (the --no-rhsm option or the LEAPP_NO_RHSM=1 environment variable has been set) so leapp is not able to obtain YUM/DNF repositories with the content for the target system in the standard way. The content has to be delivered either by user manually or, in case of public clouds, by a special Leapp package for RHUI environments.
+Remediation: [hint] Create the repository file according to instructions in the referred document on the following path with all repositories that should be used during the upgrade: "/etc/leapp/files/leapp_upgrade_repositories.repo"
+
+--> Create a /etc/leapp/files/leapp_upgrade_repositories.repo and add the rhel8 repo in the file
+
+iv) Risk Factor: high (error)
+Title: Not enough space available on /var/lib/leapp/scratch: Needed at least 4096 MiB.
+Summary: {"detail": "The file system hosting the /var/lib/leapp/scratch directory does not contain enough free space to proceed all parts of the in-place upgrade. Note the calculated required free space is the minimum derived from upgrades of minimal systems and the actual needed free space could be higher.\nNeeded at least: 4096 MiB.\nSuggested free space: 5096 MiB (or more)."}
+
+v)
+  File "/usr/share/leapp-repository/repositories/system_upgrade/common/libraries/mounting.py", line 345, in _create
+    raise MountError('Failed to create mount target directory {}'.format(directory), str(e))
+MountError: Failed to create mount target directory /var/lib/leapp/scratch/mounts/root_/system_overlay/var/log/audit
+
+--> for both 4 & 5 type of errors, Mount atleast 8GB partition as ext4 as /var/lib/leapp will resolve 
+
+vi) Risk Factor: high (inhibitor)
+Title: Leapp detected loaded kernel drivers which have been removed in RHEL 8. Upgrade cannot proceed.
+Summary: Support for the following RHEL 7 device drivers has been removed in RHEL 8:
+     - floppy
+     - pata_acpi
+
+---> Remove the modules 
+sudo modprobe -r pata_acpi
+sudo modprobe -r floppy
+
+vii) Risk Factor: high 
+Title: SSSD Domain "<DOMAIN_NAME>": sudo rules containing wildcards will stop working.
+Summary: Default value of ldap_sudo_include_regexp changed from true to false for performance reason.
+Remediation: [hint] If you use sudo rules with wildcards, set this option to true explicitly.
+
+--> Remove the wildcard(*) in the sudoers rules
+ 
+viii) Risk Factor: low 
+Title: SElinux will be set to permissive mode
+Summary: SElinux will be set to permissive mode. Current mode: enforcing. This action is required by the upgrade process to make sure the upgraded system can boot without beinig blocked by SElinux rules.
+Remediation: [hint] Make sure there are no SElinux related warnings after the upgrade and enable SElinux manually afterwards. Notice: You can ignore the "/root/tmp_leapp_py3" SElinux warnings.
+
+-->Disable the selinux by "sudo setenforce 0"
+
+ix)Risk Factor: high (error)
+Title: Unable to install RHEL 8 userspace packages.
+Summary: {"details": "Command ['systemd-nspawn', '--register=no', '--quiet', '-D', '/var/lib/leapp/scratch/mounts/root_/system_overlay', '--setenv=LEAPP_UPGRADE_PATH_TARGET_RELEASE=8.6', '--setenv=LEAPP_NO_RHSM=1', '--setenv=LEAPP_EXPERIMENTAL=0', '--setenv=LEAPP_UPGRADE_PATH_FLAVOUR=default', '--setenv=LEAPP_COMMON_TOOLS=:/etc/leapp/repos.d/system_upgrade/common/tools:/etc/leapp/repos.d/system_upgrade/el7toel8/tools', '--setenv=LEAPP_NO_RHSM_FACTS=1', '--setenv=LEAPP_COMMON_FILES=:/etc/leapp/repos.d/system_upgrade/common/files:/etc/leapp/repos.d/system_upgrade/el7toel8/files',  'subscription-manager'] failed with exit code 1.", 
+"stderr": "Host and machine ids are equal (98b3b81930fe4224824503e4d11e9b65): refusing to link journals\n
+Failed to synchronize cache for repo 'rhel-8-appstream-rhui-rpms', ignoring this repo.\n
+Failed to synchronize cache for repo 'rhel-8-baseos-rhui-rpms', ignoring this repo.\n
+Module yaml error: Unexpected key in component\n
+Module defaults error: Unexpected key in component\n
+Error: Unable to find a match: rh-amazon-rhui-client\n"}
+
+---> Remove the package by "sudo yum remove rh-amazon-rhui-client"
+
+x) for the below keep the answer section as true 
+ answerfile.userchoices
+[remove_pam_pkcs11_module_check]
+confirm = True
+
+[authselect_check]
+confirm = True
+
+
+
+6)Proceed the leapp upgrade to the target version and once it successfull, reboot  the servers and perform post migration checks
+
+Please refer to the below redhat link for post migration checks
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/upgrading_from_rhel_7_to_rhel_8/index#verifying-the-post-upgrade-state-of-the-rhel-8-system_upgrading-from-rhel-7-to-rhel-8
