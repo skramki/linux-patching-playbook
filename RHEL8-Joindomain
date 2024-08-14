@@ -1,0 +1,73 @@
+
+Reference Document: --> https://www.redhat.com/sysadmin/linux-active-directory
+
+## Setup Linux Join domain with Active Directory ##
+
+
+## 1) Packages to install
+# yum install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python
+
+## 2) Realmd (interacting with the domain)
+
+# realm join --user=sysadmin-<USERNAME> <DOMAIN_NAME>
+
+	## -> Supply the password when the prompt appears and wait for the process to end.
+
+## 2.a) Validate Realm
+
+# realm list
+
+## 3.a) SSSD (easier logins and dynamic updates)
+
+# cat /etc/sssd/sssd.conf
+
+[sssd]
+domains = FQDN_DOMAIN_NAME
+config_file_version = 2
+services = nss, pam
+default_domain_suffix = FQDN_DOMAIN_NAME
+
+[nss]
+debug_level = 1
+
+[domains/<FQDN_DOMAIN_NAME>]
+ad_domain = <FQDN_DOMAIN_NAME>
+krb5_realm = <FQDN_DOMAIN_NAME>
+realmd_tags = manages-system joined-with-samba
+cache_credentials = True
+krb5_validate = false
+auth_provider = ad
+id_provider = ad
+krb5_store_password_if_offline = True
+default_shell = /bin/bash
+ldap_id_mapping = true
+use_fully_qualified_names = True
+fallback_homedir = /home/%u@%d
+## ad_hostname = <WINDOWS_AD_IP_ADDRESS>
+access_provider = simple
+simple_allow_groups = <FQDN_DOMAIN_NAME>  ## (Mentioned the ad groups here), read only and admin provillage groups users)
+dyndns_update = false
+dyndns_update_ptr =false
+ldap_user_principal = sAMAccountName@REALM
+
+## 3.b) Once the configuration is complete, restart sssd to apply settings immediately.
+
+# systemctl restart sssd
+
+## 3.c) Login with Domain user to make sure connectivity establish
+
+# ssh sysadmin-<USERNAME>@0
+[sysadmin-<USERNAME>@<FQDN>@hostname] $
+
+4) Visudo (granting admin privileges)
+
+# sudo visudo
+	## Amend below Line items in /etc/sudoers file once Join domain is tested.
+
+## User Aliases ##
+User_Alias SUDO_ADMIN_PRI = %domain\ users
+## User Aliases ##
+## SUDO Restrictions ##
+%domain\ users    ALL=(ALL), !RESTRICTED, NOEXEC: NETWORK, SERVICES, STORAGE, PROCESSES, NESSUS, DELEGATING, SPLUNK, PATROL, PAGERS, FILE, ACCOUNT, TOOLS, SYSTEM, KEYS, EXEC: SOFTWARE, UNIX_SA
+## SUDO Restrictions ##
+
