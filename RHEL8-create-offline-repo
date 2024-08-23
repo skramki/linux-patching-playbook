@@ -36,9 +36,9 @@
 # ls -lrt
 ## Done with offline Repo setup
 
-## Now in Client server install plugin and proceed update
+## Now in Master server install plugin and proceed update
 
-## Step 6: ( Client Server )
+## Step 6: ( Master Server )
 
 # cat /etc/yum.conf
    Edit ( Plugins = 1 to 0 value )
@@ -55,5 +55,14 @@
 # yum check-update
 
 ## Now you can see RHEL8 packages from offline /mnt/external/repo/rhel-8-server-rpm/Packages missing items will updated
+
+## Client Server
+
+# vim /etc/yum.repo.d/redhat.repo
+	[RHEL-8]
+	name=RHEL8 Offline Repo
+	gpgcheck =1
+	enable=1
+	baseurl=file://http:<MASTER_SERVER_IP:80/rhel-8-server-rpm/Packages/	
 
 
