@@ -4,7 +4,7 @@
 # subscription-manager register
   Username:
    Password:
-# ubscription-manager subscribe
+# subscription-manager subscribe
 # yum update ## Now yum will sync with Subscription repo’s
 
 ## Step 2:
