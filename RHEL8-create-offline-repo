@@ -63,6 +63,6 @@
 	name=RHEL8 Offline Repo
 	gpgcheck =1
 	enable=1
-	baseurl=file://http:<MASTER_SERVER_IP:80/rhel-8-server-rpm/Packages/	
+	baseurl=http://<MASTER_SERVER_IP:80/rhel-8-server-rpm/Packages/	
 
 
